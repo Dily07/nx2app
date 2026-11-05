@@ -39,6 +39,19 @@ jobs:
           curl -L "${{ github.event.inputs.game_url }}" -o game.zip
           echo "Estraendo l'archivio..."
           unzip -q game.zip -d game_assets/
+
+          # build_ipa_from_nsp.py scans only the immediate contents of its
+          # input directory. Archives commonly wrap the packages in a folder,
+          # so flatten nested NSP/NSZ/XCI/XCZ files into the staging root.
+          while IFS= read -r -d '' package; do
+            relative_path="${package#game_assets/}"
+            flat_name="${relative_path//\//_}"
+            cp "$package" "game_assets/$flat_name"
+          done < <(
+            find game_assets -mindepth 2 -type f \
+              \( -iname '*.nsp' -o -iname '*.nsz' -o -iname '*.xci' -o -iname '*.xcz' \) \
+              -print0
+          )
           
       - name: Build dell'IPA
         run: |
