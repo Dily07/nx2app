@@ -91,6 +91,27 @@ jobs:
           source.write_text(text[:match.start()] + guarded + text[match.end():])
           PY
 
+      - name: Evita il capture GLSLC non necessario per Dead Cells
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          script = Path("scripts/build_ipa_from_nsp.py")
+          text = script.read_text()
+          old = (
+              "glslc = gfx == 'nvn' and src['glslc_capture'][0]   "
+              "# shaders the game compiles at run time, captured in the Mac host (capture_glslc)"
+          )
+          new = (
+              "glslc = (g.id != '0100646009FBE000' and gfx == 'nvn' and "
+              "src['glslc_capture'][0])   "
+              "# Dead Cells has a complete static shader cache; its capture boot is unnecessary"
+          )
+          if old not in text:
+              raise SystemExit("Expected GLSLC capture selection not found")
+          script.write_text(text.replace(old, new, 1))
+          PY
+
       - name: Scarica ed estrai gli asset di gioco
         run: |
           mkdir -p game_assets
