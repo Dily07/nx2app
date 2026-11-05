@@ -59,20 +59,36 @@ jobs:
       - name: Compatibilità MetalFX con SDK macOS 26
         run: |
           python3 - <<'PY'
+          import re
           from pathlib import Path
 
           source = Path("dm/gfx/nvn/nvn_mtl.m")
           text = source.read_text()
-          old = """            sc.colorContentOffsetX = (NSUInteger)a.base[DLSS_COLOR][0]; sc.colorContentOffsetY = (NSUInteger)a.base[DLSS_COLOR][1];
-            sc.depthContentOffsetX = (NSUInteger)a.base[DLSS_DEPTH][0]; sc.depthContentOffsetY = (NSUInteger)a.base[DLSS_DEPTH][1];
-            sc.motionContentOffsetX = (NSUInteger)a.base[DLSS_MOTION][0]; sc.motionContentOffsetY = (NSUInteger)a.base[DLSS_MOTION][1];
-            sc.outputOffsetX = (NSUInteger)a.base[DLSS_OUTPUT][0]; sc.outputOffsetY = (NSUInteger)a.base[DLSS_OUTPUT][1];"""
-          new = """#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 270000
-          """ + old + """
-          #endif"""
-          if old not in text:
+          assignments = re.compile(
+              r"(?m)^([ \t]*)"
+              r"(sc\.colorContentOffsetX[^\n]*\n\1"
+              r"sc\.depthContentOffsetX[^\n]*\n\1"
+              r"sc\.motionContentOffsetX[^\n]*\n\1"
+              r"sc\.outputOffsetX[^\n]*)$"
+          )
+          match = assignments.search(text)
+          if match is None:
+              if "#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 270000" in text:
+                  print("MetalFX SDK 27 assignments are already guarded")
+                  raise SystemExit(0)
               raise SystemExit("Expected MetalFX SDK 27 assignments not found")
-          source.write_text(text.replace(old, new, 1))
+          line_start = text.rfind("\n", 0, match.start()) + 1
+          previous_line = text[:line_start].rstrip().splitlines()[-1].strip()
+          if previous_line == "#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 270000":
+              print("MetalFX SDK 27 assignments are already guarded")
+              raise SystemExit(0)
+          indent, block = match.groups()
+          guarded = (
+              f"#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 270000\n"
+              f"{block}\n"
+              f"{indent}#endif"
+          )
+          source.write_text(text[:match.start()] + guarded + text[match.end():])
           PY
 
       - name: Scarica ed estrai gli asset di gioco
