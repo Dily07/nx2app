@@ -17,7 +17,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: seedds/nxnative
-          
+
+      - name: Work around Apple assembler dav1d incompatibility
+        run: |
+          # The generated dav1d config enables GNU-only dotprod/i8mm
+          # .arch_extension directives, which Apple clang rejects.
+          sed -i '' \
+            -e 's/#define HAVE_AS_ARCHEXT_DOTPROD_DIRECTIVE 1/#define HAVE_AS_ARCHEXT_DOTPROD_DIRECTIVE 0/' \
+            -e 's/#define HAVE_AS_ARCHEXT_I8MM_DIRECTIVE 1/#define HAVE_AS_ARCHEXT_I8MM_DIRECTIVE 0/' \
+            dm/third_party/dav1d/config/config.h
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
