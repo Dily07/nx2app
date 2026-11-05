@@ -32,6 +32,26 @@ jobs:
         run: |
           python3 -m pip install lz4 "capstone>=5,<6" fonttools nsz zbic "backports.zstd; python_version < '3.14'"
 
+      - name: Compatibilità assembler Apple per dav1d
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          config = Path("dm/third_party/dav1d/config/config.h")
+          text = config.read_text()
+          replacements = {
+              "#define HAVE_AS_ARCHEXT_DOTPROD_DIRECTIVE 1":
+                  "#define HAVE_AS_ARCHEXT_DOTPROD_DIRECTIVE 0",
+              "#define HAVE_AS_ARCHEXT_I8MM_DIRECTIVE 1":
+                  "#define HAVE_AS_ARCHEXT_I8MM_DIRECTIVE 0",
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"Expected dav1d setting not found: {old}")
+              text = text.replace(old, new, 1)
+          config.write_text(text)
+          PY
+
       - name: Scarica ed estrai gli asset di gioco
         run: |
           mkdir -p game_assets
