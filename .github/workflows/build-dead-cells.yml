@@ -1,0 +1,63 @@
+name: Build Dead Cells IPA (NX2Apple/nxnative)
+
+on:
+  workflow_dispatch:
+    inputs:
+      game_url:
+        description: "Link diretto allo zip contenente i file di Dead Cells (.nsp, update, DLC) e il file prod.keys"
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: macos-14 # Apple Silicon runner richiesto per Metal Toolchain e la compilazione degli shader
+
+    steps:
+      - name: Checkout core engine (nxnative)
+        uses: actions/checkout@v4
+        with:
+          repository: seedds/nxnative
+          
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Installa dipendenze di sistema
+        run: |
+          brew install xcodegen zstd glslang
+          brew install --cask dotnet-sdk
+
+      - name: Installa Apple Metal Toolchain
+        run: sudo xcodebuild -downloadComponent MetalToolchain
+
+      - name: Installa dipendenze Python
+        run: |
+          python3 -m pip install lz4 "capstone>=5,<6" fonttools nsz zbic "backports.zstd; python_version < '3.14'"
+
+      - name: Scarica ed estrai gli asset di gioco
+        run: |
+          mkdir -p game_assets
+          echo "Scaricando i file..."
+          curl -L "${{ github.event.inputs.game_url }}" -o game.zip
+          echo "Estraendo l'archivio..."
+          unzip -q game.zip -d game_assets/
+          
+      - name: Build dell'IPA
+        run: |
+          # Individua il percorso esatto del prod.keys
+          KEYS_PATH=$(find game_assets -name "prod.keys" | head -n 1)
+          if [ -z "$KEYS_PATH" ]; then
+            echo "Errore: file prod.keys non trovato nello zip!"
+            exit 1
+          fi
+          
+          echo "Avviando la build pipeline per Dead Cells (ID: 0100646009FBE000)..."
+          python3 scripts/build_ipa_from_nsp.py game_assets -k "$KEYS_PATH" --app-name "Dead Cells"
+          
+      - name: Upload Artifact IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dead-Cells-IPA
+          path: "*.ipa"
+          retention-days: 3
