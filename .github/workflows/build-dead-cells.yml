@@ -111,6 +111,15 @@ jobs:
               \( -iname '*.nsp' -o -iname '*.nsz' -o -iname '*.xci' -o -iname '*.xcz' \) \
               -print0
           )
+
+          package_count=$(find game_assets -maxdepth 1 -type f \
+            \( -iname '*.nsp' -o -iname '*.nsz' -o -iname '*.xci' -o -iname '*.xcz' \) \
+            | wc -l | tr -d ' ')
+          if [ "$package_count" -lt 2 ]; then
+            echo "Errore: Dead Cells 1.25.0 richiede il gioco base e l'aggiornamento v3014656."
+            echo "Fornire un archivio che includa almeno il gioco base e l'aggiornamento."
+            exit 1
+          fi
           
       - name: Build dell'IPA
         run: |
@@ -124,7 +133,10 @@ jobs:
           echo "Avviando la build pipeline per Dead Cells (ID: 0100646009FBE000)..."
           # macos-26 currently selects Xcode 26.6, while nxnative's packaged
           # shaders were tested with Xcode 27.2's Metal compiler.
-          python3 scripts/build_ipa_from_nsp.py game_assets -k "$KEYS_PATH" --app-name "Dead Cells" --allow-other-metal
+          python3 scripts/build_ipa_from_nsp.py game_assets -k "$KEYS_PATH" \
+            --package v3014656 \
+            --app-name "Dead Cells" \
+            --allow-other-metal
           
       - name: Upload Artifact IPA
         uses: actions/upload-artifact@v4
