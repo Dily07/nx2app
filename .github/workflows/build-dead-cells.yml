@@ -17,6 +17,23 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: seedds/nxnative
+
+      - name: Skip unnecessary Dead Cells GLSLC capture
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          script = Path("scripts/build_ipa_from_nsp.py")
+          text = script.read_text()
+          old = "glslc = gfx == 'nvn' and src['glslc_capture'][0]"
+          new = (
+              "glslc = (gfx == 'nvn' and src['glslc_capture'][0] "
+              "and g.id != '0100646009FBE000')"
+          )
+          if old not in text:
+              raise SystemExit("Expected GLSLC capture decision was not found")
+          script.write_text(text.replace(old, new, 1))
+          PY
           
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
