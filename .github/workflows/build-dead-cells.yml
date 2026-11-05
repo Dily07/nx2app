@@ -148,7 +148,9 @@ jobs:
           fi
           
           echo "Avviando la build pipeline per Dead Cells (ID: 0100646009FBE000)..."
-          python3 scripts/build_ipa_from_nsp.py game_assets -k "$KEYS_PATH" --app-name "Dead Cells"
+          # macos-26 currently selects Xcode 26.6, while nxnative's packaged
+          # shaders were tested with Xcode 27.2's Metal compiler.
+          python3 scripts/build_ipa_from_nsp.py game_assets -k "$KEYS_PATH" --app-name "Dead Cells" --allow-other-metal
           
       - name: Upload Artifact IPA
         uses: actions/upload-artifact@v4
