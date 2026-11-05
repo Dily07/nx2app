@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14 # Apple Silicon runner richiesto per Metal Toolchain e la compilazione degli shader
+    runs-on: macos-26 # Apple Silicon runner richiesto per Metal 4 e la compilazione degli shader
 
     steps:
       - name: Checkout core engine (nxnative)
