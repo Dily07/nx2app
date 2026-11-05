@@ -56,6 +56,25 @@ jobs:
           config.write_text(text)
           PY
 
+      - name: Compatibilità MetalFX con SDK macOS 26
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path("dm/gfx/nvn/nvn_mtl.m")
+          text = source.read_text()
+          old = """            sc.colorContentOffsetX = (NSUInteger)a.base[DLSS_COLOR][0]; sc.colorContentOffsetY = (NSUInteger)a.base[DLSS_COLOR][1];
+            sc.depthContentOffsetX = (NSUInteger)a.base[DLSS_DEPTH][0]; sc.depthContentOffsetY = (NSUInteger)a.base[DLSS_DEPTH][1];
+            sc.motionContentOffsetX = (NSUInteger)a.base[DLSS_MOTION][0]; sc.motionContentOffsetY = (NSUInteger)a.base[DLSS_MOTION][1];
+            sc.outputOffsetX = (NSUInteger)a.base[DLSS_OUTPUT][0]; sc.outputOffsetY = (NSUInteger)a.base[DLSS_OUTPUT][1];"""
+          new = """#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 270000
+          """ + old + """
+          #endif"""
+          if old not in text:
+              raise SystemExit("Expected MetalFX SDK 27 assignments not found")
+          source.write_text(text.replace(old, new, 1))
+          PY
+
       - name: Scarica ed estrai gli asset di gioco
         run: |
           mkdir -p game_assets
