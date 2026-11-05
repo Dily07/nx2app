@@ -18,21 +18,30 @@ jobs:
         with:
           repository: seedds/nxnative
 
-      - name: Skip unnecessary Dead Cells GLSLC capture
+      - name: Use Dead Cells packaged NVN shaders
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
           script = Path("scripts/build_ipa_from_nsp.py")
           text = script.read_text()
-          old = "glslc = gfx == 'nvn' and src['glslc_capture'][0]"
-          new = (
+          old_gfx = "gfx = src['graphics'][0]   # nvn, vulkan"
+          new_gfx = (
+              "gfx = ('nvn' if g.id == '0100646009FBE000' else "
+              "src['graphics'][0])   # nvn, vulkan"
+          )
+          if old_gfx not in text:
+              raise SystemExit("Expected graphics decision was not found")
+          text = text.replace(old_gfx, new_gfx, 1)
+
+          old_glslc = "glslc = gfx == 'nvn' and src['glslc_capture'][0]"
+          new_glslc = (
               "glslc = (gfx == 'nvn' and src['glslc_capture'][0] "
               "and g.id != '0100646009FBE000')"
           )
-          if old not in text:
+          if old_glslc not in text:
               raise SystemExit("Expected GLSLC capture decision was not found")
-          script.write_text(text.replace(old, new, 1))
+          script.write_text(text.replace(old_glslc, new_glslc, 1))
           PY
           
       - name: Set up Python 3.12
